@@ -9,13 +9,43 @@ A small local server captures your microphone (via `sounddevice`) and streams th
 volume to a browser page over WebSocket, so there's no in-browser mic permission
 prompt, which is flaky inside OBS/Streamlabs' embedded Chromium.
 
-## Quick start
+## Requirements
+
+The only system dependency is **PortAudio** (used to read your microphone).
+
+| OS | Setup |
+| --- | --- |
+| **Windows** 10/11 | Nothing to install, PortAudio is bundled. |
+| **Arch / Manjaro** | `sudo pacman -S portaudio` |
+| **Debian** | `sudo apt install libportaudio2` |
+| **Ubuntu** | `sudo apt install libportaudio2` |
+
+Running from source also needs [Python 3.12+](https://www.python.org/downloads/) and
+[uv](https://docs.astral.sh/uv/) (`pip install uv`, or see the uv docs for other installers).
+The prebuilt binaries below don't need Python or uv.
+
+Linux audio works best with PulseAudio or PipeWire (the default on current Arch,
+Debian and Ubuntu). A browser is needed to open the settings page.
+
+## Download (no install)
+
+Grab `reactive-avatars-windows.exe` or `reactive-avatars-linux` from the
+[Releases](../../releases) page and double-click it (on Linux, `chmod +x` it first,
+and run it in a terminal if your file manager asks).
+
+- **Windows:** the binary is unsigned, so SmartScreen may warn. Click
+  *More info → Run anyway*.
+- **Linux:** install PortAudio first (see above).
+
+To build it yourself: `make build` (produces a binary for your current OS).
+
+## Quick start (from source)
 
 ```bash
 uv run reactive-avatars        # or: pip install . && reactive-avatars
 ```
 
-Requires Python 3.12+. This opens the settings page, where you can:
+This opens the settings page, where you can:
 
 1. **Upload your avatar** (PNG, JPG, GIF, WebP or SVG; transparent PNGs look best),
    and optionally a second image to show while talking.

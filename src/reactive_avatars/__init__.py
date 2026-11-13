@@ -22,4 +22,6 @@ def main() -> None:
             webbrowser.open(f"{base}/settings")
         except Exception:
             pass
-    uvicorn.run("reactive_avatars.server:app", host=args.host, port=args.port, log_level="warning")
+    from .server import app  # imported here so a frozen build bundles it
+
+    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
