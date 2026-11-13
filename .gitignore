@@ -5,3 +5,6 @@ dist/
 .idea/
 .vscode/
 build/
+
+# personal avatar art, kept locally only
+src/twitch_icon.png

@@ -61,7 +61,12 @@ Streamlabs. Changes apply live. Keep the terminal open while streaming.
 | `http://127.0.0.1:8347/settings` | Settings page |
 | `http://127.0.0.1:8347/?debug=1` | Overlay with a small volume readout |
 
-Options: `--port 9000`, `--host 0.0.0.0`, `--no-browser`.
+Options: `--port 9000`, `--host 0.0.0.0`, `--no-browser`, `--keep-alive`.
+
+**Stopping the app:** click **Quit app** on the settings page. The app also quits by
+itself about 10 seconds after you close the settings tab, as long as no overlay (OBS /
+Streamlabs) is still connected, so closing the browser won't kill your stream overlay.
+Pass `--keep-alive` to disable the auto-quit. `Ctrl+C` in the terminal always works.
 
 ## Tuning the mic
 

@@ -130,16 +130,26 @@
     saveStatusEl.textContent = cfg.error ? "Could not open that microphone." : "Saved.";
   });
 
+  let quitting = false;
+  $("quit").addEventListener("click", async () => {
+    quitting = true;
+    await fetch("/api/quit", { method: "POST" }).catch(() => {});
+    document.body.innerHTML =
+      '<p style="font:16px system-ui;padding:40px;color:#e8f6f0">reactive-avatars has stopped. You can close this tab.</p>';
+  });
+
   function connect() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${proto}://${location.host}/ws/audio`);
+    const ws = new WebSocket(`${proto}://${location.host}/ws/audio?role=settings`);
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.config) return;
       rawFillEl.style.width = `${Math.min(100, (data.raw / METER_MAX) * 100)}%`;
       outFillEl.style.width = `${Math.round(data.volume * 100)}%`;
     };
-    ws.onclose = () => setTimeout(connect, 1000);
+    ws.onclose = () => {
+      if (!quitting) setTimeout(connect, 1000);
+    };
     ws.onerror = () => ws.close();
   }
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Literal
+from typing import Callable, Literal
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
@@ -18,7 +18,16 @@ BROADCAST_HZ = 30
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 engine: AudioEngine | None = None
-clients: set[WebSocket] = set()
+clients: set[WebSocket] = set()  # every connected page (overlay + settings)
+settings_clients: set[WebSocket] = set()
+settings_seen = False  # arms auto-quit the first time a settings page connects
+
+# Auto-quit: once the settings page has been opened, the app exits when every
+# page (settings and overlay) has been gone for QUIT_GRACE_S seconds. The grace
+# period survives a page reload. Disable with --keep-alive.
+auto_quit = True
+QUIT_GRACE_S = 10
+request_shutdown: Callable[[], None] = lambda: None  # set by main()
 
 
 class ConfigUpdate(BaseModel):
@@ -85,17 +94,31 @@ async def _broadcast_loop() -> None:
             await _send_all({"volume": round(volume, 4), "raw": round(raw, 4)})
 
 
+async def _quit_watchdog() -> None:
+    empty_for = 0.0
+    while True:
+        await asyncio.sleep(1)
+        if not (auto_quit and settings_seen) or clients:
+            empty_for = 0.0
+            continue
+        empty_for += 1
+        if empty_for >= QUIT_GRACE_S:
+            request_shutdown()
+            return
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global engine
     cfg = cfg_mod.load_config()
     engine = AudioEngine(cfg["device"], cfg["gain"], cfg["gate"])
     engine.start()
-    task = asyncio.create_task(_broadcast_loop())
+    tasks = [asyncio.create_task(_broadcast_loop()), asyncio.create_task(_quit_watchdog())]
     try:
         yield
     finally:
-        task.cancel()
+        for task in tasks:
+            task.cancel()
         engine.stop()
 
 
@@ -130,6 +153,12 @@ async def api_set_config(update: ConfigUpdate) -> JSONResponse:
     engine.restart(update.device, update.gain, update.gate)
     await _send_all({"config": overlay_config()})
     return JSONResponse(settings_payload())
+
+
+@app.post("/api/quit")
+async def api_quit() -> JSONResponse:
+    asyncio.get_running_loop().call_later(0.3, request_shutdown)  # let the response out first
+    return JSONResponse({"ok": True})
 
 
 @app.get("/avatar/{slot}")
@@ -185,8 +214,12 @@ def _delete_image(cfg: dict, slot: str) -> None:
 
 @app.websocket("/ws/audio")
 async def ws_audio(websocket: WebSocket) -> None:
+    global settings_seen
     await websocket.accept()
     clients.add(websocket)
+    if websocket.query_params.get("role") == "settings":
+        settings_clients.add(websocket)
+        settings_seen = True
     try:
         await websocket.send_json({"config": overlay_config()})
         while True:
@@ -195,3 +228,4 @@ async def ws_audio(websocket: WebSocket) -> None:
         pass
     finally:
         clients.discard(websocket)
+        settings_clients.discard(websocket)

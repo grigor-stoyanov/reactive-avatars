@@ -11,6 +11,11 @@ def main() -> None:
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8347)
+    parser.add_argument(
+        "--keep-alive",
+        action="store_true",
+        help="keep running after the settings page and overlay are closed",
+    )
     parser.add_argument("--no-browser", action="store_true", help="don't open the settings page")
     args = parser.parse_args()
 
@@ -22,6 +27,11 @@ def main() -> None:
             webbrowser.open(f"{base}/settings")
         except Exception:
             pass
-    from .server import app  # imported here so a frozen build bundles it
+    from . import server  # imported here so a frozen build bundles it
 
-    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+    uvi = uvicorn.Server(
+        uvicorn.Config(server.app, host=args.host, port=args.port, log_level="warning")
+    )
+    server.auto_quit = not args.keep_alive
+    server.request_shutdown = lambda: setattr(uvi, "should_exit", True)
+    uvi.run()
