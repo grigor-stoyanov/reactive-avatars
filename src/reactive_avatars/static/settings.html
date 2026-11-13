@@ -21,7 +21,24 @@
   </div>
 
   <div class="block">
-    <span class="legend">Avatar</span>
+    <label for="avatarSelect">Avatar</label>
+    <select id="avatarSelect"></select>
+    <p class="hint" id="avatarHint"></p>
+  </div>
+
+  <div id="customOptions" class="block" hidden>
+    <span class="legend">Build your avatar from layers</span>
+    <p class="hint">
+      Export every layer from your art program as a <b>transparent image of the same size</b>
+      (PNG, WebP or SVG). They stack automatically, so there is nothing to position. Only the
+      body is required; add eyes and mouths to make it talk and blink.
+    </p>
+    <div id="layerSlots"></div>
+  </div>
+
+  <div id="imageOptions" hidden>
+  <div class="block">
+    <span class="legend">Your image</span>
     <div class="slots">
       <div class="slot">
         <img id="idlePreview" alt="Idle avatar preview">
@@ -43,6 +60,9 @@
     </p>
   </div>
 
+  </div>
+
+  <div id="motionOptions">
   <div class="block">
     <div class="row">
       <label for="motion">Motion</label>
@@ -51,6 +71,7 @@
     <input id="motion" type="range" min="0" max="3" step="0.1">
     <label class="check"><input id="glow" type="checkbox"> Glow</label>
     <label class="check">Glow color <input id="glowColor" type="color"></label>
+  </div>
   </div>
 
   <div class="block">

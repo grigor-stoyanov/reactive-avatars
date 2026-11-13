@@ -1,9 +1,15 @@
 # reactive-avatars
 
-Turn any image into a mic-reactive avatar for OBS / Streamlabs Browser Sources.
+A mic-reactive avatar for OBS / Streamlabs Browser Sources. Bring your own character:
 
-Upload a picture and it bounces and glows with your voice. Add a second "talking"
-image and it swaps to that while you speak (the classic PNGtuber setup).
+- **Build one from layers, no code.** Upload same-size transparent images (body, eyes open/closed,
+  mouth closed/open, plus ears, a hat, anything) in the settings page. It blinks, talks, droops
+  when you're quiet, perks ears, and glows with your voice.
+- **Use a single picture** that bounces with your voice, or two for the classic PNGtuber swap.
+- **Drop in a hand-animated rig** (any SVG/HTML page) as a private avatar pack.
+
+It ships with **Blobby**, an example layered avatar. See
+[docs/making-an-avatar.md](docs/making-an-avatar.md).
 
 A small local server captures your microphone (via `sounddevice`) and streams the
 volume to a browser page over WebSocket, so there's no in-browser mic permission
@@ -48,8 +54,8 @@ uv run reactive-avatars        # or: pip install . && reactive-avatars
 
 This opens the settings page, where you can:
 
-1. **Upload your avatar** (PNG, JPG, GIF, WebP or SVG; transparent PNGs look best),
-   and optionally a second image to show while talking.
+1. **Choose your avatar:** the example, **Build my own from layers**, or **A single picture**
+   (PNG, JPG, GIF, WebP or SVG; transparent PNGs look best).
 2. **Pick your microphone** and tune the noise gate and sensitivity with the live meter.
 3. Adjust motion strength and glow color.
 
@@ -132,17 +138,22 @@ src/reactive_avatars/
   server.py     FastAPI app: overlay, settings, image upload, WebSocket
   audio.py      mic capture -> gated volume
   config.py     settings + paths
-  static/       overlay and settings pages (plain HTML/JS/CSS, no build step)
-examples/neon-cat/   a hand-animated SVG avatar, as a template for custom rigs
+  packs.py      avatar packs: discovery, layer builder, safe file access
+  static/       overlay + settings pages (plain HTML/JS/CSS, no build step)
+    layers.*    the player for layered avatars
+    packs/      built-in example avatars (Blobby)
+docs/           making-an-avatar.md
+tests/          pytest (make test)
 ```
 
-Settings and uploaded images live in `~/.config/reactive-avatars/`.
+Settings, uploaded images and your own avatar packs live in `~/.config/reactive-avatars/`.
 
-## Custom animation
+## Custom avatars
 
-For a fully custom avatar, copy `examples/neon-cat/` and edit it. It connects to the
-same `/ws/audio` WebSocket, which sends `{"volume": 0..1, "raw": rms}` ~30 times a
-second (plus a one-off `{"config": ...}` message you can ignore).
+Everything about making and sharing avatars (layer format, reactions, previewing, and
+fully custom HTML rigs) is in [docs/making-an-avatar.md](docs/making-an-avatar.md). Packs
+in `~/.config/reactive-avatars/packs/` stay on your machine, so private art never has to
+be committed anywhere.
 
 ## License
 

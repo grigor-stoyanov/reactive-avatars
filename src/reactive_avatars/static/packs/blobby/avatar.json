@@ -1,0 +1,46 @@
+{
+  "name": "Blobby (example)",
+  "type": "layers",
+  "layers": [
+    {
+      "image": "ear_left.svg",
+      "react": "perk_left"
+    },
+    {
+      "image": "ear_right.svg",
+      "react": "perk_right"
+    },
+    {
+      "image": "body.svg",
+      "role": "body"
+    },
+    {
+      "image": "eyes_open.svg",
+      "role": "eyes_open"
+    },
+    {
+      "image": "eyes_half.svg",
+      "role": "eyes_half"
+    },
+    {
+      "image": "eyes_closed.svg",
+      "role": "eyes_closed"
+    },
+    {
+      "image": "mouth_closed.svg",
+      "role": "mouth_closed"
+    },
+    {
+      "image": "mouth_half.svg",
+      "role": "mouth_half"
+    },
+    {
+      "image": "mouth_open.svg",
+      "role": "mouth_open"
+    },
+    {
+      "image": "sprout.svg",
+      "react": "lift"
+    }
+  ]
+}

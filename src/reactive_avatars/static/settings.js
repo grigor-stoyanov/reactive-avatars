@@ -64,6 +64,111 @@
     paintGateMark();
     showStatus(cfg);
     paintImages(cfg);
+    await loadAvatars(cfg.avatar);
+  }
+
+  const avatarSelectEl = $("avatarSelect");
+  let packList = [];
+
+  function paintMode(avatar) {
+    const pack = packList.find((p) => p.id === avatar);
+    const usesMotion = avatar === "image" || avatar === "custom" || pack?.type === "layers";
+    $("imageOptions").hidden = avatar !== "image";
+    $("customOptions").hidden = avatar !== "custom";
+    $("motionOptions").hidden = !usesMotion;
+    $("avatarHint").textContent =
+      avatar === "image"
+        ? "One picture that bounces and glows with your voice. Optionally add a second one to show while talking."
+        : avatar === "custom"
+          ? "Your own animated avatar, built from layers below."
+          : pack?.builtin
+            ? "Built-in example. Make your own with the layer builder, or see docs/making-an-avatar.md."
+            : "Your private avatar pack from ~/.config/reactive-avatars/packs/.";
+    avatarSelectEl.value = avatar;
+  }
+
+  async function loadAvatars(current) {
+    packList = await fetch("/api/packs").then((r) => r.json());
+    avatarSelectEl.replaceChildren();
+    const add = (value, text) => {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = text;
+      avatarSelectEl.appendChild(opt);
+    };
+    for (const p of packList) if (p.id !== "custom") add(p.id, p.name);
+    add("custom", "Build my own from layers");
+    add("image", "A single picture");
+    paintMode(current);
+    await loadCustomSlots();
+  }
+
+  avatarSelectEl.addEventListener("change", () => paintMode(avatarSelectEl.value));
+
+  async function loadCustomSlots() {
+    const { slots, reactions } = await fetch("/api/custom").then((r) => r.json());
+    paintSlots(slots, reactions);
+  }
+
+  function paintSlots(slots, reactions) {
+    const root = $("layerSlots");
+    root.replaceChildren();
+    for (const slot of slots) {
+      const row = document.createElement("div");
+      row.className = "layer-row";
+      const thumb = document.createElement("img");
+      thumb.className = "layer-thumb";
+      thumb.alt = "";
+      if (slot.url) thumb.src = slot.url;
+      else thumb.style.visibility = "hidden";
+      const label = document.createElement("div");
+      label.className = "layer-label";
+      label.textContent = slot.label + (slot.required ? " *" : "");
+      const file = document.createElement("input");
+      file.type = "file";
+      file.accept = "image/png,image/webp,image/svg+xml,image/gif,image/jpeg";
+      file.addEventListener("change", async () => {
+        const f = file.files[0];
+        if (!f) return;
+        const res = await fetch(`/api/custom/${slot.role}`, { method: "PUT", headers: { "Content-Type": f.type }, body: f });
+        if (!res.ok) return void (saveStatusEl.textContent = (await res.json()).detail ?? "Upload failed.");
+        const data = await res.json();
+        paintSlots(data.slots, reactions);
+        paintMode(data.avatar);
+        saveStatusEl.textContent = "Layer updated.";
+      });
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "ghost";
+      clear.textContent = "Remove";
+      clear.hidden = !slot.url;
+      clear.addEventListener("click", async () => {
+        const data = await fetch(`/api/custom/${slot.role}`, { method: "DELETE" }).then((r) => r.json());
+        paintSlots(data.slots, reactions);
+      });
+      row.append(thumb, label, file, clear);
+      if (slot.reaction !== null) {
+        const sel = document.createElement("select");
+        sel.className = "layer-react";
+        sel.title = "How this layer moves when you talk";
+        for (const r of reactions) {
+          const opt = document.createElement("option");
+          opt.value = r;
+          opt.textContent = r.replace("_", " ");
+          sel.appendChild(opt);
+        }
+        sel.value = slot.reaction;
+        sel.addEventListener("change", () =>
+          fetch(`/api/custom/${slot.role}/reaction`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reaction: sel.value }),
+          }),
+        );
+        row.append(sel);
+      }
+      root.append(row);
+    }
   }
 
   function paintImages(cfg) {
@@ -85,7 +190,9 @@
       saveStatusEl.textContent = (await res.json()).detail ?? "Upload failed.";
       return;
     }
-    paintImages(await res.json());
+    const cfg = await res.json();
+    paintImages(cfg);
+    paintMode(cfg.avatar);
     saveStatusEl.textContent = "Avatar updated.";
   }
 
@@ -120,6 +227,7 @@
         device: deviceEl.value === "" ? null : deviceEl.value,
         gain: Number(gainEl.value),
         gate: Number(gateEl.value),
+        avatar: avatarSelectEl.value,
         motion: Number(motionEl.value),
         glow: glowEl.checked,
         glow_color: glowColorEl.value,

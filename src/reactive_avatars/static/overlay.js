@@ -21,6 +21,7 @@
   const clamp01 = (v) => Math.min(1, Math.max(0, v));
 
   function applyConfig(cfg) {
+    if (cfg.avatar !== "image") return location.reload(); // switched to the built-in cat
     settings = cfg;
     if (idleEl.getAttribute("src") !== cfg.idle_image) idleEl.src = cfg.idle_image;
     if (cfg.talking_image) {

@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Callable, Literal
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import config as cfg_mod
+from . import packs
 from .audio import AudioEngine, list_input_devices
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -31,6 +33,7 @@ request_shutdown: Callable[[], None] = lambda: None  # set by main()
 
 
 class ConfigUpdate(BaseModel):
+    avatar: str = Field(packs.DEFAULT_PACK, pattern=r"^[A-Za-z0-9_-]{1,64}$")
     device: str | None = None
     gain: float = Field(4.0, ge=0.5, le=50)
     gate: float = Field(0.06, ge=0, le=1)
@@ -47,6 +50,14 @@ def _image_path(cfg: dict, slot: str) -> Path | None:
     return path if path.is_file() else None
 
 
+def _active_avatar(cfg: dict) -> str:
+    """The configured avatar, falling back to the default if that pack was removed."""
+    avatar = cfg["avatar"]
+    if avatar == "image" or packs.pack_dir(avatar) is not None:
+        return avatar
+    return packs.DEFAULT_PACK
+
+
 def overlay_config() -> dict:
     """What the overlay page needs to render (sent over the WebSocket)."""
     cfg = cfg_mod.load_config()
@@ -56,7 +67,10 @@ def overlay_config() -> dict:
         images[slot] = f"/avatar/{slot}?v={path.stat().st_mtime_ns}" if path else None
     if images["idle"] is None:
         images["idle"] = "/static/default-avatar.svg"
+    avatar = _active_avatar(cfg)
     return {
+        "avatar": avatar,
+        "rev": packs.manifest_rev(avatar) if avatar != "image" else 0,
         "motion": cfg["motion"],
         "glow": cfg["glow"],
         "glow_color": cfg["glow_color"],
@@ -127,8 +141,99 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/")
-async def overlay_page() -> FileResponse:
-    return FileResponse(STATIC_DIR / "overlay.html")
+async def overlay_page(avatar: str | None = None) -> Response:
+    """The Browser Source page. ``?avatar=<id>`` previews another pack without switching
+    (add ``&volume=0.9`` to hold a loudness while you design its mouth frames)."""
+    preview = avatar is not None and packs.pack_dir(avatar) is not None
+    if not preview:
+        avatar = _active_avatar(cfg_mod.load_config())
+    no_store = {"Cache-Control": "no-store"}
+    if avatar == "image":
+        return FileResponse(STATIC_DIR / "overlay.html", headers=no_store)
+    base = packs.pack_dir(avatar)
+    manifest = json.loads((base / "avatar.json").read_text())
+    if manifest.get("type") == "html":
+        entry = packs.resolve_file(avatar, str(manifest.get("entry", "index.html")))
+        if entry is None:
+            raise HTTPException(404, "Pack entry page not found")
+        page = entry.read_text()
+        head = f'<base href="/a/{avatar}/">'
+    else:
+        page = (STATIC_DIR / "layers.html").read_text()
+        head = ""
+    head += (
+        f'<script>window.RA_AVATAR={json.dumps(avatar)};window.RA_REV={packs.manifest_rev(avatar)};window.RA_PREVIEW={json.dumps(preview)};'
+        '</script><script src="/static/reload.js"></script>'
+    )
+    page = page.replace("<head>", f"<head>{head}", 1) if "<head>" in page else head + page
+    return HTMLResponse(page, headers=no_store)
+
+
+@app.get("/a/{pack_id}/{path:path}")
+async def pack_file(pack_id: str, path: str) -> FileResponse:
+    target = packs.resolve_file(pack_id, path)
+    if target is None:
+        raise HTTPException(404)
+    return FileResponse(target, headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/packs")
+async def api_packs() -> JSONResponse:
+    return JSONResponse(packs.list_packs())
+
+
+@app.get("/api/custom")
+async def api_custom() -> JSONResponse:
+    return JSONResponse({"slots": packs.custom_slots(), "reactions": packs.REACTIONS})
+
+
+def _read_image_body_type(request: Request) -> str:
+    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    ext = cfg_mod.IMAGE_TYPES.get(content_type)
+    if ext is None:
+        raise HTTPException(415, f"Unsupported type. Use one of: {', '.join(cfg_mod.IMAGE_TYPES)}")
+    return ext
+
+
+async def _read_limited_body(request: Request) -> bytes:
+    body = bytearray()
+    async for chunk in request.stream():
+        body += chunk
+        if len(body) > MAX_UPLOAD_BYTES:
+            raise HTTPException(413, "Image too large (10 MB max)")
+    if not body:
+        raise HTTPException(400, "Empty upload")
+    return bytes(body)
+
+
+@app.put("/api/custom/{role}")
+async def put_custom_layer(role: str, request: Request) -> JSONResponse:
+    ext = _read_image_body_type(request)
+    data = await _read_limited_body(request)
+    try:
+        packs.set_custom_layer(role, ext, data)
+    except KeyError:
+        raise HTTPException(404, "Unknown layer")
+    cfg_mod.save_config({**cfg_mod.load_config(), "avatar": packs.CUSTOM_ID})
+    await _send_all({"config": overlay_config()})
+    return JSONResponse({"slots": packs.custom_slots(), "avatar": packs.CUSTOM_ID})
+
+
+@app.delete("/api/custom/{role}")
+async def delete_custom_layer(role: str) -> JSONResponse:
+    packs.clear_custom_layer(role)
+    await _send_all({"config": overlay_config()})
+    return JSONResponse({"slots": packs.custom_slots()})
+
+
+@app.put("/api/custom/{role}/reaction")
+async def put_custom_reaction(role: str, request: Request) -> JSONResponse:
+    try:
+        packs.set_custom_reaction(role, (await request.json()).get("reaction", ""))
+    except KeyError:
+        raise HTTPException(400, "Unknown layer or reaction")
+    await _send_all({"config": overlay_config()})
+    return JSONResponse({"slots": packs.custom_slots()})
 
 
 @app.get("/settings")
@@ -173,24 +278,17 @@ async def get_avatar(slot: Literal["idle", "talking"]) -> FileResponse:
 @app.put("/api/avatar/{slot}")
 async def put_avatar(slot: Literal["idle", "talking"], request: Request) -> JSONResponse:
     """Raw image bytes as the request body (no multipart dependency needed)."""
-    content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
-    ext = cfg_mod.IMAGE_TYPES.get(content_type)
-    if ext is None:
-        raise HTTPException(415, f"Unsupported type. Use one of: {', '.join(cfg_mod.IMAGE_TYPES)}")
-    body = bytearray()
-    async for chunk in request.stream():
-        body += chunk
-        if len(body) > MAX_UPLOAD_BYTES:
-            raise HTTPException(413, "Image too large (10 MB max)")
-    if not body:
-        raise HTTPException(400, "Empty upload")
+    ext = _read_image_body_type(request)
+    body = await _read_limited_body(request)
 
     cfg = cfg_mod.load_config()
     _delete_image(cfg, slot)
     cfg_mod.IMAGE_DIR.mkdir(parents=True, exist_ok=True)
     name = f"{slot}{ext}"
-    (cfg_mod.IMAGE_DIR / name).write_bytes(bytes(body))
+    (cfg_mod.IMAGE_DIR / name).write_bytes(body)
     cfg[f"{slot}_image"] = name
+    if slot == "idle":
+        cfg["avatar"] = "image"  # uploading a main image means you want to use it
     cfg_mod.save_config(cfg)
     await _send_all({"config": overlay_config()})
     return JSONResponse(settings_payload())

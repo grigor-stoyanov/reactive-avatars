@@ -6,7 +6,8 @@ from typing import Any
 
 CONFIG_DIR = Path.home() / ".config" / "reactive-avatars"
 CONFIG_PATH = CONFIG_DIR / "config.json"
-IMAGE_DIR = CONFIG_DIR / "avatars"
+IMAGE_DIR = CONFIG_DIR / "avatars"  # single-image uploads
+PACKS_DIR = CONFIG_DIR / "packs"  # user avatar packs (private rigs, downloaded packs, the layer builder)
 
 # Upload slots: "idle" is the main avatar, "talking" is an optional swap-in image.
 SLOTS = ("idle", "talking")
@@ -21,6 +22,7 @@ IMAGE_TYPES = {
 }
 
 DEFAULTS: dict[str, Any] = {
+    "avatar": "blobby",  # a pack id, or "image" for the single-picture mode
     "device": None,  # input device name, None = automatic (sound server default)
     "gate": 0.06,  # raw mic RMS below this counts as silence
     "gain": 4.0,  # multiplies the gated level to reach full reaction
