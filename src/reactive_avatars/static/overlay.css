@@ -1,0 +1,43 @@
+/* One centred image that scales to fit the Browser Source box. Transparent
+   background so only the avatar shows over your scene. */
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+}
+
+#stage {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#avatar {
+  width: 88vmin;
+  height: 88vmin;
+  will-change: transform;
+}
+
+#avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  will-change: filter;
+}
+
+#avatar img[hidden] { display: none; }
+
+#debug {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  font: 11px ui-monospace, monospace;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 8px;
+  border-radius: 4px;
+}

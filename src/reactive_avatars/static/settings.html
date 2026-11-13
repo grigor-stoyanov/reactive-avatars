@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>reactive-avatars settings</title>
+<link rel="stylesheet" href="/static/settings.css">
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>reactive-avatars</h1>
+    <p class="sub">Upload your avatar and tune the microphone. The overlay updates live, no restart needed.</p>
+    <span class="status"><span class="dot" id="statusDot"></span><span id="statusText">connecting…</span></span>
+  </header>
+
+  <div class="block">
+    <span class="legend">Browser Source URL</span>
+    <div class="url" id="overlayUrl"></div>
+    <p class="hint">Add this as a Browser Source in Streamlabs. Any size works, a square like 400&times;400 fits best.</p>
+  </div>
+
+  <div class="block">
+    <span class="legend">Avatar</span>
+    <div class="slots">
+      <div class="slot">
+        <img id="idlePreview" alt="Idle avatar preview">
+        <div class="slot-name">Main image</div>
+        <input id="idleFile" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+        <button class="ghost" id="idleReset" type="button">Use default</button>
+      </div>
+      <div class="slot">
+        <img id="talkingPreview" alt="Talking avatar preview" hidden>
+        <div class="slot-name">Talking image <span class="opt">(optional)</span></div>
+        <input id="talkingFile" type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml">
+        <button class="ghost" id="talkingReset" type="button">Remove</button>
+      </div>
+    </div>
+    <p class="hint">
+      PNG, JPG, GIF, WebP or SVG up to 10&nbsp;MB. Transparent PNGs look best.
+      With only a main image it bounces and glows with your voice; add a talking image
+      and it swaps to that while you speak.
+    </p>
+  </div>
+
+  <div class="block">
+    <div class="row">
+      <label for="motion">Motion</label>
+      <span class="val" id="motionVal"></span>
+    </div>
+    <input id="motion" type="range" min="0" max="3" step="0.1">
+    <label class="check"><input id="glow" type="checkbox"> Glow</label>
+    <label class="check">Glow color <input id="glowColor" type="color"></label>
+  </div>
+
+  <div class="block">
+    <span class="legend">Input level</span>
+    <div class="meter"><div id="rawFill"></div><div id="gateMark"></div></div>
+    <div class="meter meter-out"><div id="outFill"></div></div>
+    <div class="scale"><span>silent</span><span>loud</span></div>
+    <p class="hint">
+      Green is your raw mic, amber is the gate, violet is what reaches the avatar.
+      Set the gate just above where the green bar idles when you&rsquo;re not talking.
+    </p>
+  </div>
+
+  <div class="block">
+    <label for="device">Microphone</label>
+    <select id="device"></select>
+  </div>
+
+  <div class="block">
+    <div class="row">
+      <label for="gate">Noise gate</label>
+      <span class="val" id="gateVal"></span>
+    </div>
+    <input id="gate" type="range" min="0" max="0.3" step="0.005">
+    <p class="hint">Anything quieter than this counts as silence, so the avatar stays still.</p>
+  </div>
+
+  <div class="block">
+    <div class="row">
+      <label for="gain">Sensitivity</label>
+      <span class="val" id="gainVal"></span>
+    </div>
+    <input id="gain" type="range" min="1" max="20" step="0.5">
+    <p class="hint">How strongly the avatar reacts to a given voice. It also self-adjusts as you talk.</p>
+  </div>
+
+  <div>
+    <button id="save">Save and apply</button>
+    <div id="saveStatus"></div>
+  </div>
+</div>
+<script src="/static/settings.js"></script>
+</body>
+</html>

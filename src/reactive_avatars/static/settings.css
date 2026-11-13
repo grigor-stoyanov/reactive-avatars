@@ -1,0 +1,190 @@
+/* Layout: single column of labelled control blocks, meter first.
+     Same neon-terminal palette as the overlay it configures. */
+  :root {
+    --mint: #45f0a6;
+    --mint-dim: #2bbd7e;
+    --violet: #8b6cf0;
+    --amber: #ffc94d;
+    --rose: #ff7a9c;
+    --bg: #080a18;
+    --surface: #111630;
+    --surface-2: #19203f;
+    --line: #26305a;
+    --fg: #e8f6f0;
+    --fg-dim: #93a6b8;
+    --mono: ui-monospace, "JetBrains Mono", "Fira Code", "DejaVu Sans Mono", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    line-height: 1.5;
+  }
+
+  .wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 36px 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  header { display: flex; flex-direction: column; gap: 8px; }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 19px;
+    margin: 0;
+    color: var(--mint);
+    letter-spacing: 0.3px;
+  }
+
+  .sub { margin: 0; color: var(--fg-dim); font-size: 14px; }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--fg-dim);
+  }
+
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--mint); box-shadow: 0 0 8px var(--mint);
+  }
+
+  .dot.bad { background: var(--rose); box-shadow: 0 0 8px var(--rose); }
+
+  .block {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .block > label, .legend {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--fg-dim);
+    font-weight: 600;
+  }
+
+  .hint { font-size: 13px; color: var(--fg-dim); margin: 0; }
+
+  select, input[type=range] { width: 100%; accent-color: var(--mint); }
+
+  select {
+    background: var(--surface-2);
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+
+  .val {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--mint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* meter: raw mic level with the gate threshold marked on the same scale */
+  .meter {
+    position: relative;
+    height: 22px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  #rawFill {
+    position: absolute; inset: 0 auto 0 0;
+    width: 0%;
+    background: var(--mint);
+    transition: width 60ms linear;
+  }
+
+  #gateMark {
+    position: absolute; top: -2px; bottom: -2px;
+    width: 2px;
+    background: var(--amber);
+    box-shadow: 0 0 6px var(--amber);
+  }
+
+  .meter-out { height: 10px; margin-top: 6px; }
+  #outFill {
+    position: absolute; inset: 0 auto 0 0;
+    width: 0%;
+    background: var(--violet);
+    transition: width 60ms linear;
+  }
+
+  .scale {
+    display: flex; justify-content: space-between;
+    font-family: var(--mono); font-size: 11px; color: var(--fg-dim);
+  }
+
+  button {
+    background: var(--mint);
+    color: #05210f;
+    border: none;
+    border-radius: 9px;
+    padding: 12px 18px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  button:hover { background: #63ffbb; }
+  button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .url {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--mint);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 11px 12px;
+    word-break: break-all;
+    user-select: all;
+  }
+
+  #saveStatus { font-size: 13px; color: var(--fg-dim); min-height: 20px; }
+
+.slots { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.slot { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.slot img {
+  width: 100%; aspect-ratio: 1; object-fit: contain;
+  background: repeating-conic-gradient(#1b2244 0 25%, #141a38 0 50%) 0 0 / 16px 16px;
+  border: 1px solid var(--line); border-radius: 8px;
+}
+.slot img[hidden] { display: none; }
+.slot-name { font-size: 13px; font-weight: 600; }
+.opt { color: var(--fg-dim); font-weight: 400; }
+.slot input[type=file] { font-size: 12px; color: var(--fg-dim); max-width: 100%; }
+button.ghost { background: transparent; color: var(--fg-dim); border: 1px solid var(--line); padding: 7px 12px; font-weight: 500; font-size: 13px; }
+button.ghost:hover { background: var(--surface-2); }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.check input { accent-color: var(--mint); }
+@media (max-width: 420px) { .slots { grid-template-columns: 1fr; } }
