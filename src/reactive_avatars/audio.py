@@ -8,12 +8,16 @@ import sounddevice as sd
 BLOCK_SIZE = 1024
 
 
-def resolve_device(configured: int | None) -> int | None:
-    """PortAudio's default input is often a raw ALSA card that records silence on
-    PipeWire/PulseAudio systems, so prefer the sound server's own device."""
-    if configured is not None:
-        return configured
+def resolve_device(configured: str | None) -> int | None:
+    """Map a saved device name to PortAudio's current index (indices shift between
+    runs, names don't). With no choice saved, PortAudio's default input is often a
+    raw ALSA card that records silence on PipeWire/PulseAudio systems, so prefer
+    the sound server's own device."""
     devices = sd.query_devices()
+    if configured:
+        for index, info in enumerate(devices):
+            if info["name"] == configured and info.get("max_input_channels", 0) > 0:
+                return index
     for preferred in ("pulse", "pipewire"):
         for index, info in enumerate(devices):
             if info["name"] == preferred and info.get("max_input_channels", 0) > 0:
@@ -31,7 +35,6 @@ def list_input_devices() -> list[dict]:
         if info.get("max_input_channels", 0) > 0:
             devices.append(
                 {
-                    "index": index,
                     "name": info["name"],
                     "is_default": index == default_input,
                 }
@@ -43,7 +46,7 @@ class AudioEngine:
     """Captures mic audio on a PortAudio callback thread and exposes a
     gain/gate-adjusted volume (0..1)."""
 
-    def __init__(self, device: int | None, gain: float, gate: float) -> None:
+    def __init__(self, device: str | None, gain: float, gate: float) -> None:
         self.device = device
         self.gain = gain
         self.gate = gate
@@ -81,7 +84,7 @@ class AudioEngine:
             self._stream.close()
             self._stream = None
 
-    def restart(self, device: int | None, gain: float, gate: float) -> None:
+    def restart(self, device: str | None, gain: float, gate: float) -> None:
         self.stop()
         self.device = device
         self.gain = gain

@@ -1,5 +1,6 @@
 # PyInstaller spec: one self-contained executable for the OS it is built on.
 import os
+import sys
 
 from PyInstaller.utils.hooks import collect_all
 
@@ -25,6 +26,12 @@ a = Analysis(
     binaries=binaries,
     hiddenimports=hiddenimports,
 )
+# Linux: use the system's ALSA/PortAudio, never a copy bundled from the build machine.
+# A bundled libasound looks for plugins in the build distro's directory, so it can't
+# find the user's PipeWire/PulseAudio plugins and the mic list comes up empty.
+if sys.platform.startswith("linux"):
+    a.binaries = [b for b in a.binaries if not b[0].startswith(("libasound", "libportaudio"))]
+
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz,

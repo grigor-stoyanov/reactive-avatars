@@ -31,7 +31,7 @@ request_shutdown: Callable[[], None] = lambda: None  # set by main()
 
 
 class ConfigUpdate(BaseModel):
-    device: int | None = None
+    device: str | None = None
     gain: float = Field(4.0, ge=0.5, le=50)
     gate: float = Field(0.06, ge=0, le=1)
     motion: float = Field(1.0, ge=0, le=3)

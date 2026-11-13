@@ -47,12 +47,12 @@
     deviceEl.replaceChildren(auto);
     for (const d of devices) {
       const opt = document.createElement("option");
-      opt.value = d.index;
+      opt.value = d.name;
       opt.textContent = d.name;
       deviceEl.appendChild(opt);
     }
 
-    deviceEl.value = cfg.device === null ? "" : String(cfg.device);
+    deviceEl.value = cfg.device ?? "";
     gainEl.value = cfg.gain;
     gateEl.value = cfg.gate;
     gainValEl.textContent = `${Number(cfg.gain).toFixed(1)}x`;
@@ -117,7 +117,7 @@
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        device: deviceEl.value === "" ? null : Number(deviceEl.value),
+        device: deviceEl.value === "" ? null : deviceEl.value,
         gain: Number(gainEl.value),
         gate: Number(gateEl.value),
         motion: Number(motionEl.value),
